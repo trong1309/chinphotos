@@ -1,7 +1,19 @@
 import sharp from 'sharp';
 import crypto from 'crypto';
+import env from '../config/env';
 import AppError from '../utils/appError';
 import { saveFileLocally, deleteFileLocally } from './storage/local';
+import { saveFileToCloudinary, deleteFileFromCloudinary } from './storage/cloudinary';
+
+const saveFile = (filename: string, buffer: Buffer) =>
+  env.STORAGE_DRIVER === 'cloudinary'
+    ? saveFileToCloudinary(filename, buffer)
+    : saveFileLocally(filename, buffer);
+
+const deleteFile = (filename: string) =>
+  env.STORAGE_DRIVER === 'cloudinary'
+    ? deleteFileFromCloudinary(filename)
+    : deleteFileLocally(filename);
 
 export interface ProcessedImageResult {
   url: string; // Defaults to large image URL
@@ -83,7 +95,7 @@ export const processAndSaveImage = async (
     .webp({ quality: 85 })
     .toBuffer();
   const largeFilename = `${baseKey}-large.webp`;
-  const largeSaved = await saveFileLocally(largeFilename, largeBuffer);
+  const largeSaved = await saveFile(largeFilename, largeBuffer);
 
   // 2. Generate Medium (max 1200px)
   const mediumBuffer = await sharp(buffer)
@@ -92,7 +104,7 @@ export const processAndSaveImage = async (
     .webp({ quality: 82 })
     .toBuffer();
   const mediumFilename = `${baseKey}-medium.webp`;
-  const mediumSaved = await saveFileLocally(mediumFilename, mediumBuffer);
+  const mediumSaved = await saveFile(mediumFilename, mediumBuffer);
 
   // 3. Generate Thumbnail (max 400px)
   const thumbBuffer = await sharp(buffer)
@@ -101,7 +113,7 @@ export const processAndSaveImage = async (
     .webp({ quality: 80 })
     .toBuffer();
   const thumbFilename = `${baseKey}-thumb.webp`;
-  const thumbSaved = await saveFileLocally(thumbFilename, thumbBuffer);
+  const thumbSaved = await saveFile(thumbFilename, thumbBuffer);
 
   // 4. Generate BlurDataURL (tiny 16px placeholder base64)
   const tinyBuffer = await sharp(buffer)
@@ -132,5 +144,5 @@ export const deleteImageFiles = async (storageKey: string): Promise<void> => {
     `${storageKey}-thumb.webp`,
   ];
 
-  await Promise.all(filenames.map((filename) => deleteFileLocally(filename)));
+  await Promise.all(filenames.map((filename) => deleteFile(filename)));
 };
