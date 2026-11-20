@@ -1,0 +1,26 @@
+{$DOMAIN:localhost} {
+    encode zstd gzip
+
+    header {
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    handle /api/* {
+        reverse_proxy server:5000
+    }
+
+    handle /uploads/* {
+        reverse_proxy server:5000
+    }
+
+    handle /admin* {
+        header X-Robots-Tag "noindex, nofollow, noarchive"
+        reverse_proxy admin:80
+    }
+
+    handle {
+        reverse_proxy client:80
+    }
+}
